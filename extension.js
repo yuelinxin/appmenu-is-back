@@ -1,6 +1,6 @@
 //    App Menu Is Back
 //    GNOME Shell extension
-//    @fthx 2025
+//    @fthx 2025, based on GNOME Shell 48's panel.js AppMenuButton code
 
 import Atk from 'gi://Atk';
 import Clutter from 'gi://Clutter';
@@ -17,7 +17,6 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 const PANEL_ICON_SIZE = 16;
 const APP_MENU_ICON_MARGIN = 0;
 
-// This class is taken from GNOME Shell 48's panel.js .
 const AppMenuButton = GObject.registerClass({
     Signals: { 'changed': {} },
 }, class AppMenuButton extends PanelMenu.Button {
@@ -44,15 +43,10 @@ const AppMenuButton = GObject.registerClass({
         this._iconBox = new St.Bin({
             style_class: 'app-menu-icon',
             y_align: Clutter.ActorAlign.CENTER,
-            style: 'margin-right: 4px;',
+            style: 'margin-right: 4px; -st-icon-style: symbolic',
         });
         this._iconBox.add_effect(iconEffect);
         this._container.add_child(this._iconBox);
-
-        this._iconBox.connect('style-changed', () => {
-            let themeNode = this._iconBox.get_theme_node();
-            iconEffect.enabled = themeNode.get_icon_style() === St.IconStyle.SYMBOLIC;
-        });
 
         this._label = new St.Label({
             y_expand: true,
@@ -66,12 +60,6 @@ const AppMenuButton = GObject.registerClass({
         Main.overview.connectObject(
             'hiding', this._sync.bind(this),
             'showing', this._sync.bind(this), this);
-
-        this._spinner = new Animation.Spinner(PANEL_ICON_SIZE, {
-            animate: true,
-            hideOnStop: true,
-        });
-        this._container.add_child(this._spinner);
 
         let menu = new AppMenu(this);
         this.setMenu(menu);
@@ -117,15 +105,8 @@ const AppMenuButton = GObject.registerClass({
 
     _syncIcon(app) {
         const icon = app.create_icon_texture(PANEL_ICON_SIZE - APP_MENU_ICON_MARGIN);
+        icon.set_style_class_name('app-menu-icon');
         this._iconBox.set_child(icon);
-    }
-
-    stopAnimation() {
-        this._spinner.stop();
-    }
-
-    startAnimation() {
-        this._spinner.play();
     }
 
     _onAppStateChanged(appSys, app) {
@@ -196,10 +177,6 @@ const AppMenuButton = GObject.registerClass({
         let isBusy = this._targetApp != null &&
             (this._targetApp.get_state() === Shell.AppState.STARTING ||
                 this._targetApp.get_busy());
-        if (isBusy)
-            this.startAnimation();
-        else
-            this.stopAnimation();
 
         this.reactive = visible && !isBusy;
 
